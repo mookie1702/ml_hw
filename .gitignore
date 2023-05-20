@@ -1,8 +1,11 @@
+# files
+*.ckpt
+result.txt
+sample_log.txt
+
 # folders
 .vscode
-
 dataset
-
 */models
-
 */runs
+*/saved_models
