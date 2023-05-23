@@ -1,17 +1,17 @@
 import sys, os
+import time
+import datetime
+import numpy as np
+import gymnasium as gym
+import torch
+
+from agents.DQN.agent import DQN
+
 
 curr_path = os.path.dirname(__file__)
 parent_path = os.path.dirname(curr_path)
-sys.path.append(parent_path)  # add current terminal path to sys.path
-
-import torch
-import datetime
-import time
-
-from agents.DQN.agent import DQN
-import numpy as np
-
-import gymnasium as gym
+# add current terminal path to sys.path
+sys.path.append(parent_path)
 
 curr_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")  # obtain current time
 
@@ -22,10 +22,10 @@ class DQNConfig:
         # self.env = "CartPole-v1"
         self.env = "ALE/SpaceInvaders-ram-v5"
         self.seed = 15
-        self.ShowImage = True  # render image
+        self.ShowImage = False  # render image
         # self.result_path = curr_path+"/outputs/" +self.env+'/'+curr_time+'/results/'  # path to save results
         self.load_model = False  # load model
-        self.train = False
+        self.train = True
         self.model_path = "saved_models/SpaceInvaders/"  # path to save models
         self.capacity = int(2e5)  # replay buffer size
         self.batch_size = 256  # minibatch size
