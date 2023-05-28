@@ -24,8 +24,8 @@ class DQNConfig:
         self.seed = 15
         self.ShowImage = False  # render image
         # self.result_path = curr_path+"/outputs/" +self.env+'/'+curr_time+'/results/'  # path to save results
-        self.load_model = False  # load model
-        self.train = True
+        self.load_model = True  # load model
+        self.train = False
         self.model_path = "saved_models/SpaceInvaders/"  # path to save models
         self.capacity = int(2e5)  # replay buffer size
         self.batch_size = 256  # minibatch size
@@ -147,6 +147,10 @@ def train(cfg: DQNConfig, env, agent):
             np.savetxt(
                 cfg.model_path + "ma_reward_{}.txt".format(curr_time), ma_rewards
             )
+            if i_ep > 1500:
+                tmp_rewards, tmp_ma_rewards = eval(cfg, env, agent)
+                if tmp_rewards[-1] >= 450:
+                    break
 
     print("Complete training！")
     return rewards, ma_rewards
