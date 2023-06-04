@@ -33,10 +33,7 @@ class Scenario(BaseScenario):
             agent.size = 0.025 if agent.adversary else 0.025
             # 设置加速度
             agent.accel = 0.85 if agent.adversary else 1.0
-            # agent.accel = 1
-            # agent.accel = 20.0 if agent.adversary else 25.0
             # 设置最大速度
-            # agent.max_speed = 1.0 if agent.adversary else 1.3
             agent.max_speed = 0.28 if agent.adversary else 0.25
         # 添加障碍物
         world.landmarks = [Landmark() for i in range(num_landmarks)]
@@ -112,27 +109,27 @@ class Scenario(BaseScenario):
         # 设置检查点的位置和速度
         world.check[0].state.p_pos = [-0.5, -0.5]
         world.check[0].state.p_vel = np.zeros(world.dim_p)
-        # 每条边20个border， 计算大概位置，依次为每条边的 border 生成位置坐标
+        # 每条边20个 border, 计算大概位置, 依次为每条边的 border 生成位置坐标
         pos = []
-        # bottom
+        # 底部边界
         x = -0.95
         y = -1.0
         for count in range(20):
             pos.append([x, y])
             x += 0.1
-        # right
+        # 右边边界
         x = 1.0
         y = -0.95
         for count in range(20):
             pos.append([x, y])
             y += 0.1
-        # top
+        # 上面边界
         x = 0.95
         y = 1.0
         for count in range(20):
             pos.append([x, y])
             x -= 0.1
-        # left
+        # 左边边界
         x = -1.0
         y = 0.95
         for count in range(20):

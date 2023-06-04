@@ -32,7 +32,6 @@ if __name__ == "__main__":
 
         # 读取游戏图片
         image = env.render("rgb_array")[0]
-        # print(f"shape: {np.shape(image)}")
 
         step += 1
 
