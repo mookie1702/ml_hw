@@ -17,31 +17,24 @@ if __name__ == "__main__":
         done_callback=scenario.is_done,
         shared_viewer=True,
     )
-
+    # 设置追捕智能体与逃逸智能体的位置
     env.reset(np.array([[0.0, 0.0], [0.7, 0.7]]))
-    # 使用这种方法读取图片
+    # 读取游戏图片
     image = env.render("rgb_array")
 
     step = 0
     total_step = 0
     max_step = 400
-    # file = open('./course/label.txt', 'w')
     while True:
-        # 动作空间:[noop, move right, move left, move up, move down]
+        # 动作空间: [noop, move right, move left, move up, move down]
         act_n = np.array([0, 0, 1, 0, 1])
         next_obs_n, reward_n, done_n, _ = env.step(act_n, 1)
-        # print(f"vel: {np.linalg.norm(next_obs_n[0][-4:-2])}, vel2: {np.linalg.norm(next_obs_n[0][-2:])}")
-        # 使用这种方法读取图片
-        image = env.render("rgb_array")[0]
 
+        # 读取游戏图片
+        image = env.render("rgb_array")[0]
         # print(f"shape: {np.shape(image)}")
+
         step += 1
-        # if step % 50:
-        #     print(image)
-        #     plt.imshow(image)
-        #     plt.show()
-        #     time.sleep(0.0167) # 60 fps
-        #     plt.close()
 
         if True in done_n or step > max_step:
             break
