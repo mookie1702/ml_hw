@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Get Data
-
-#! wget https://www.dropbox.com/s/6l2vcvxl54b0b6w/food11.zip
-#! wget -O food11.zip "https://github.com/virginiakm1988/ML2022-Spring/blob/main/HW03/food11.zip?raw=true"
-#
-#! unzip food11.zip
-
-_exp_name = "sample"
-
 # Import necessary packages.
 import random
 import numpy as np
@@ -25,6 +14,7 @@ from torchvision.datasets import DatasetFolder, VisionDataset
 # This is for the progress bar.
 from tqdm.auto import tqdm
 
+_exp_name = "sample"
 
 # set a random seed for reproducibility
 myseed = 6666
@@ -352,5 +342,5 @@ def Predict_demo():
 
 
 if __name__ == "__main__":
-    # Training_Demo()
-    Testing_Demo()
+    Training_Demo()
+    # Testing_Demo()
