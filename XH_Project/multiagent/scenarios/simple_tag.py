@@ -218,26 +218,28 @@ class Scenario(BaseScenario):
         """
         rew = 0
         adversaries = self.adversaries(world)
-        # 设置碰撞惩罚
+        # 当被追击者碰到后, reward 减少
         if agent.collide:
             for a in adversaries:
                 if self.is_collision(a, agent):
                     rew -= 10
+        # 碰到障碍物后, reward 减少
         for i, landmark in enumerate(world.landmarks):
             if not landmark.boundary:
                 if self.is_collision(landmark, agent):
                     rew -= 10
+        # 碰到边界后, reward 减少
         for i, border in enumerate(world.borders):
             if self.is_collision(border, agent):
                 rew -= 10
-        # 设置距离惩罚: 距离 check 点越远，惩罚越大
+        # 与打卡点之间的距离越小越好
         dist = np.sqrt(
             np.sum(np.square(agent.state.p_pos - world.check[0].state.p_pos))
         )
-        rew -= 0.5 * dist
+        rew -= 0.1 * dist
         # 设置完成任务的奖励
         if dist < agent.size + world.check[0].size:
-            rew += 12
+            rew += 10
         return rew
 
     def adversary_reward(self, agent, world):

@@ -1,34 +1,41 @@
-import torch
-import gym
-import torch.nn as nn
 import numpy as np
+from gym.spaces import Discrete
 
+import torch
+import torch.nn as nn
 from torch.optim import Adam
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
-from gym.spaces import Discrete
-import policy_gradient
 
-from multiagent.policy import InteractivePolicy
+import policy_gradient
 
 
 class GAE_buffer:
+    """
+    A buffer for storing trajectories experienced by a policy gradient agent
+    interacting with the environment, and using Generalized Advantage Estimation
+    (GAE-Lambda) for calculating the advantages of state-action pairs.
+    """
+
     def __init__(self, size, obs_dim, act_dim, gamma, lam):
         """
-        A buffer for storing trajectories experienced by a pg agent interacting
-        with the environment, and using Generalized Advantage Estimation (GAE-Lambda)
-        for calculating the advantages of state-action pairs.
-        :param size: number of datapoints
-        :param obs_dim: scalar
-        :param act_dim: scalar
-        :param gamma: discount factor
-        :param lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
+        param size: 缓冲区大小, 即数据点的数量
+        param obs_dim: 状态空间的维度
+        param act_dim: 动作空间的维度
+        param gamma: 折扣因子,用于计算奖励的折扣累积
+        param lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
         """
+        # 存储状态的数组
         self.obs_buf = np.zeros(policy_gradient.combined_shape(size, obs_dim))
+        # 存储动作的数组
         self.act_buf = np.zeros(policy_gradient.combined_shape(size, act_dim))
+        # 存储奖励的数组
         self.rew_buf = np.zeros((size,))
+        # 存储价值估计的数组
         self.val_buf = np.zeros((size,))
+        # 存储折扣累积奖励的数组
         self.rtg_buf = np.zeros((size,))
+        # 存储优势估计的数组
         self.adv_buf = np.zeros((size,))
 
         self.gamma, self.lam = gamma, lam
@@ -36,7 +43,7 @@ class GAE_buffer:
 
     def store(self, obs, act, rew, val):
         """
-        store one transition into buffer
+        Function: Store one transition into buffer.
         """
         assert self.ptr < self.max_size
         self.obs_buf[self.ptr] = obs
@@ -51,11 +58,16 @@ class GAE_buffer:
          1. agent dies, which means the return following is zero.
          2. it reaches the max_episode_len or the trajectory being cut off at time T,
             then you should provided an estimate V(S_T) using critic to compensate for the rewards beyond time T
-        :param v: the value estimated by critic for the final state
-        :return: None
+
+        param v: the value estimated by critic for the final state
+
+        return: None
         """
+        # 获取在 GAE_buffer 中的当前轨迹
         path_slice = slice(self.path_start_idx, self.ptr)
+        # 获取奖励数组
         rews = np.append(self.rew_buf[path_slice], val)
+        # 获取价值估计数组
         vals = np.append(self.val_buf[path_slice], val)
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
 
@@ -142,9 +154,8 @@ class ppo:
         )
 
         # optimizers
-        self.pi_optimizer = Adam(
-            self.pi.parameters(), lr=pi_lr
-        )  # it is wrong to optimize only parameters of mu !!!
+        # it is wrong to optimize only parameters of mu !!!
+        self.pi_optimizer = Adam(self.pi.parameters(), lr=pi_lr)
         self.v_optimizer = Adam(self.v.parameters(), lr=v_lr)
 
     def act(self, obs):
