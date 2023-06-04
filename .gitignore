@@ -8,7 +8,6 @@ sample_log.txt
 dataset
 */models
 */runs
-*/saved_models
 
 */__pycache__
 */*/__pycache__

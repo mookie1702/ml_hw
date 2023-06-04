@@ -25,8 +25,8 @@ class DQNConfig:
         self.ShowImage = False  # render image
         # self.result_path = curr_path+"/outputs/" +self.env+'/'+curr_time+'/results/'  # path to save results
         self.load_model = True  # load model
-        self.train = False
-        self.model_path = "saved_models/SpaceInvaders/"  # path to save models
+        self.train = True
+        self.model_path = "model/"  # path to save models
         self.capacity = int(2e5)  # replay buffer size
         self.batch_size = 256  # minibatch size
         self.gamma = 0.99  # discount factor

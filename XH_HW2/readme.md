@@ -32,7 +32,3 @@
 - 提交算法代码
 - 提交训练过程的`reward_*.txt`和`ma_reward_*.txt`文件。
 - 提交最后的测试分数的`reward_eval.txt`文件。
-
-> 提交文件可参考`.\agents\DQN\`和`.\saved_models\SpaceInvaders\`文件夹内的内容。
-
-> 提交到邮箱: 13025291859@163.com
