@@ -3,17 +3,17 @@ import math
 import numpy as np
 
 # Reading / Writing Data
-import pandas as pd
 import os
 import csv
-
-# For Progress Bar
-from tqdm import tqdm
+import pandas as pd
 
 # Pytorch
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, random_split
+
+# For Progress Bar
+from tqdm import tqdm
 
 # For plotting learning curve
 from torch.utils.tensorboard import SummaryWriter
@@ -21,12 +21,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 def same_seed(seed):
     """
-    Function: 固定网络优化算法和随机数种子，确保结果可复现.
-    Fixes random number generator seeds for reproducibility.
+    函数作用: 固定网络优化算法和随机数种子，确保结果可复现.
     """
     # 固定卷积算法为默认算法
     torch.backends.cudnn.deterministic = True
-    # 禁止搜索最适合的卷积实现算法
+    # 禁止搜索最适合的卷积实现算法 (即固定卷积实现算法)
     torch.backends.cudnn.benchmark = False
     # 固定随机数种子
     np.random.seed(seed)
@@ -36,7 +35,9 @@ def same_seed(seed):
 
 
 def train_valid_split(data_set, valid_ratio, seed):
-    """Split provided training data into training set and validation set"""
+    """
+    函数作用: 将训练数据分为训练集和验证集.
+    """
     valid_set_size = int(valid_ratio * len(data_set))
     train_set_size = len(data_set) - valid_set_size
     train_set, valid_set = random_split(
@@ -48,7 +49,9 @@ def train_valid_split(data_set, valid_ratio, seed):
 
 
 def predict(test_loader, model, device):
-    # Set your model to evaluation mode.
+    """
+    函数作用: 使用训练好的模型对测试数据进行预测.
+    """
     model.eval()
     preds = []
     for x in tqdm(test_loader):
@@ -103,7 +106,9 @@ class My_Model(nn.Module):
 
 
 def select_feat(train_data, valid_data, test_data, select_all=True):
-    """Selects useful features to perform regression"""
+    """
+    Function: Selects useful features to perform regression.
+    """
     y_train, y_valid = train_data[:, -1], valid_data[:, -1]
     raw_x_train, raw_x_valid, raw_x_test = (
         train_data[:, :-1],
@@ -111,10 +116,11 @@ def select_feat(train_data, valid_data, test_data, select_all=True):
         test_data,
     )
 
+    # TODO: Select suitable feature columns.
     if select_all:
         feat_idx = list(range(raw_x_train.shape[1]))
     else:
-        feat_idx = [0, 1, 2, 3, 4]  # TODO: Select suitable feature columns.
+        feat_idx = [0, 1, 2, 3, 4]
 
     return (
         raw_x_train[:, feat_idx],
@@ -174,7 +180,8 @@ def trainer(train_loader, valid_loader, model, config, device):
         mean_train_loss = sum(loss_record) / len(loss_record)
         writer.add_scalar("Loss/train", mean_train_loss, step)
 
-        model.eval()  # Set your model to evaluation mode.
+        # Set your model to evaluation mode.
+        model.eval()
         loss_record = []
         for x, y in valid_loader:
             x, y = x.to(device), y.to(device)
@@ -190,6 +197,7 @@ def trainer(train_loader, valid_loader, model, config, device):
         )
         writer.add_scalar("Loss/valid", mean_valid_loss, step)
 
+        # 如果当前模型的 valid loss 要比之前最小的 loss 小，则记录当前模型.
         if mean_valid_loss < best_loss:
             best_loss = mean_valid_loss
             torch.save(model.state_dict(), config["save_path"])  # Save your best model
@@ -198,13 +206,16 @@ def trainer(train_loader, valid_loader, model, config, device):
         else:
             early_stop_count += 1
 
+        # Early stop
         if early_stop_count >= config["early_stop"]:
             print("\nModel is not improving, so we halt the training session.")
             return
 
 
 def save_pred(preds, file):
-    """Save predictions to specified file"""
+    """
+    Function: Save predictions to specified file.
+    """
     with open(file, "w") as fp:
         writer = csv.writer(fp)
         writer.writerow(["id", "tested_positive"])
@@ -216,14 +227,20 @@ if __name__ == "__main__":
     # 参数设置
     device = "cuda" if torch.cuda.is_available() else "cpu"
     config = {
-        "seed": 5201314,  # Your seed number, you can pick your lucky number. :)
-        "select_all": True,  # Whether to use all features.
-        "valid_ratio": 0.2,  # validation_size = train_size * valid_ratio
-        "n_epochs": 3000,  # Number of epochs.
+        # Seed number
+        "seed": 5201314,
+        # Whether to use all features
+        "select_all": True,
+        # validation_size = train_size * valid_ratio
+        "valid_ratio": 0.2,
+        # Number of epochs
+        "n_epochs": 3000,
         "batch_size": 256,
         "learning_rate": 1e-5,
-        "early_stop": 400,  # If model has not improved for this many consecutive epochs, stop training.
-        "save_path": "./models/model.ckpt",  # Your model will be saved here.
+        # If model has not improved for this epochs, stop training.
+        "early_stop": 400,
+        # The path that model will be saved.
+        "save_path": "./models/model.ckpt",
     }
 
     # Set seed for reproducibility
