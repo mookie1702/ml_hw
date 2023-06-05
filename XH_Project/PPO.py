@@ -9,6 +9,91 @@ from torch.distributions.categorical import Categorical
 
 import policy_gradient
 
+old_red = [0.0, 0.0]
+old_green = [0.7, 0.7]
+
+
+def observation_cv(env):
+    """
+    函数作用: 由数字图像处理获取观测量.
+    """
+
+    def findObject(img):
+        conts, heriachy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        location = []
+        for cnt in conts:
+            x1, y1, w, h = cv.boundingRect(cnt)
+            ty = int(y1 + h / 2)
+            tx = int(x1 + h / 2)
+            location.append([tx, ty])
+        return location
+
+    def getCoordinate(loc):
+        loc[0] = (loc[0] - 400) / 400
+        loc[1] = (400 - loc[1]) / 400
+        return loc
+
+    import cv2 as cv
+
+    global old_red
+    global old_green
+
+    obs_ = []
+    # 获取当前游戏画面图像 img_bgr
+    image = env.render(mode="rgb_array")
+    img_bgr = np.array(image)[0]
+    img_bgr = img_bgr[:, :, ::-1]
+
+    # 获取 HSV 图像 img_hsv
+    img_hsv = cv.cvtColor(img_bgr, cv.COLOR_BGR2HSV)
+    # 追击者图像
+    l_blue = np.array([[0, 43, 46]])
+    h_blue = np.array([10, 255, 255])
+    red_mask = cv.inRange(img_hsv, l_blue, h_blue)
+    # 逃逸者图像
+    l_blue = np.array([[35, 43, 46]])
+    h_blue = np.array([77, 255, 255])
+    green_mask = cv.inRange(img_hsv, l_blue, h_blue)
+    # 检查点图像
+    l_blue = np.array([[125, 43, 46]])
+    h_blue = np.array([155, 255, 255])
+    check_mask = cv.inRange(img_hsv, l_blue, h_blue)
+    # 障碍物图像
+    l_blue = np.array([[0, 0, 46]])
+    h_blue = np.array([180, 43, 200])
+    landmark_mask = cv.inRange(img_hsv, l_blue, h_blue)
+
+    # 获取追击者位置
+    red_loc = getCoordinate(findObject(red_mask)[0])
+    # 获取逃逸者位置
+    green_loc = getCoordinate(findObject(green_mask)[0])
+    # 获取检查点位置
+    check_loc = getCoordinate(findObject(check_mask)[0])
+    # 获取路障位置
+    landmark_loc = findObject(landmark_mask)
+    landmark1_loc = getCoordinate(landmark_loc[2])
+    landmark2_loc = getCoordinate(landmark_loc[1])
+    landmark3_loc = getCoordinate(landmark_loc[0])
+
+    other_pos = [red_loc[0] - green_loc[0], red_loc[1] - green_loc[1]]
+    check_pos = [green_loc[0] - check_loc[0], green_loc[0] - check_loc[1]]
+    entity1_pos = [landmark1_loc[0] - green_loc[0], landmark1_loc[1] - green_loc[1]]
+    entity2_pos = [landmark2_loc[0] - green_loc[0], landmark2_loc[1] - green_loc[1]]
+    entity3_pos = [landmark3_loc[0] - green_loc[0], landmark3_loc[1] - green_loc[1]]
+    p_vel = [green_loc[0] - old_green[0], green_loc[1] - old_green[1]]
+    other_vel = [red_loc[0] - old_red[0], red_loc[1] - old_red[1]]
+    old_red = red_loc
+    old_green = green_loc
+    obs_[0:1] = green_loc
+    obs_[2:3] = other_pos
+    obs_[4:5] = check_pos
+    obs_[6:7] = entity1_pos
+    obs_[8:9] = entity2_pos
+    obs_[10:11] = entity3_pos
+    obs_[12:13] = p_vel
+    obs_[14:15] = other_vel
+    return np.array(obs_)
+
 
 def action_one_hot(num):
     """
@@ -229,6 +314,8 @@ class ppo:
         ret_stat, len_stat = [], []
         # 初始化环境, 并初始化 状态量, 每回合 return 值和回合长度.
         o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
+        # 用自己的观测函数进行替代
+        o = observation_cv(self.env)
         for e in range(epochs):
             for t in range(self.steps_per_epoch):
                 # 将观测值 o 转为 tensor
@@ -239,8 +326,10 @@ class ppo:
                 v = self.v(o_torch).detach().numpy()
                 # 进行游戏
                 next_o, r, d, _ = self.env.step(a_n)
-
                 next_o, r, d = next_o[self.agent_id], r[self.agent_id], any(d)
+                # 用自己的观测函数进行替代
+                next_o = observation_cv(self.env)
+
                 ep_ret += r
                 ep_len += 1
                 self.buf.store(o, a, r, v)
