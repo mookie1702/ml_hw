@@ -14,20 +14,20 @@ def action_one_hot(num):
     """
     函数作用: 对动作进行 one-hot 编码.
     """
-    # action: noop
     if num == 0:
+        # action: noop
         return [1, 0, 0, 0, 0]
-    # action: move right
     elif num == 1:
+        # action: move right
         return [0, 1, 0, 0, 0]
-    # action: move left
     elif num == 2:
+        # action: move left
         return [0, 0, 1, 0, 0]
-    # action: move up
     elif num == 3:
+        # action: move up
         return [0, 0, 0, 1, 0]
-    # action: move down
     elif num == 4:
+        # action: move down
         return [0, 0, 0, 0, 1]
     else:
         return [0, 0, 0, 0, 0]
@@ -42,23 +42,23 @@ class GAE_buffer:
 
     def __init__(self, size, obs_dim, act_dim, gamma, lam):
         """
-        size: 缓冲区大小, 即数据点的数量
-        obs_dim: 状态空间的维度
-        act_dim: 动作空间的维度
-        gamma: 折扣因子,用于计算奖励的折扣累积
-        lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
+        :param size: 缓冲区大小, 即数据点的数量
+        :param obs_dim: 状态空间的维度
+        :param act_dim: 动作空间的维度
+        :param gamma: 折扣因子,用于计算奖励的折扣累积
+        :param lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
         """
         # 存储状态的数组
         self.obs_buf = np.zeros(policy_gradient.combined_shape(size, obs_dim))
         # 存储动作的数组
         self.act_buf = np.zeros(policy_gradient.combined_shape(size, act_dim))
-        # 存储奖励的数组
+        # 存储 reward 的数组
         self.rew_buf = np.zeros((size,))
-        # 存储价值估计的数组
+        # 存储 value 的数组
         self.val_buf = np.zeros((size,))
         # 存储折扣累积奖励的数组
         self.rtg_buf = np.zeros((size,))
-        # 存储优势估计的数组
+        # 存储 advantage 的数组
         self.adv_buf = np.zeros((size,))
 
         self.gamma, self.lam = gamma, lam
@@ -83,16 +83,17 @@ class GAE_buffer:
             then you should provided an estimate V(S_T) using critic to compensate for
             the rewards beyond time T.
 
-        val: the value estimated by critic for the final state
+        :param val: the value estimated by critic for the final state
 
         return: None
         """
         # 获取在 GAE_buffer 中的当前轨迹
         path_slice = slice(self.path_start_idx, self.ptr)
-        # 获取奖励数组
+        # 获取 reward 数组
         rews = np.append(self.rew_buf[path_slice], val)
-        # 获取价值估计数组
+        # 获取 value 数组
         vals = np.append(self.val_buf[path_slice], val)
+        # GAE 算法
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
 
         self.adv_buf[path_slice] = policy_gradient.discount_cumsum(
@@ -131,13 +132,12 @@ class ppo:
         clip_ratio=0.2,
     ):
         super(ppo, self).__init__()
-
         # agent 0 为追击者, agent 1 为逃逸者
         self.agent_id = 1 if agent_type == "good" else 0
-
         # 初始化环境
         self.env = env_fn()
-        # TODO: 不清楚这里为什么 self.discrete = False
+
+        # TODO: 不清楚这里为什么 self.discrete = False, 正常应该是 True.
         # self.discrete = isinstance(self.env.action_space[self.agent_id], Discrete)
         self.discrete = True
         self.obs_dim = self.env.observation_space[self.agent_id].shape[0]
@@ -154,7 +154,7 @@ class ppo:
         # ppo clip ratio
         self.clip_ratio = clip_ratio
 
-        # create actor-critic
+        # create actor-critic network
         self.mlp_sizes = [self.obs_dim] + [hid] * layers
         self.log_std = torch.nn.Parameter(
             -0.5 * torch.ones(self.act_dim, dtype=torch.float32)
@@ -168,8 +168,9 @@ class ppo:
         var_counts = tuple(
             policy_gradient.count_vars(module) for module in [self.pi, self.v]
         )
-        print("\nNumber of parameters: \t pi: %d, \t v: %d\n" % var_counts)
+        print("Number of parameters: \t pi: %d, \t v: %d\n" % var_counts)
 
+        # 创建一个 GAE_buffer
         # Discrete action in buf is of shape (N, )
         self.steps_per_epoch = steps_per_epoch
         self.buf = GAE_buffer(
@@ -180,13 +181,14 @@ class ppo:
             lam,
         )
 
-        # optimizers
-        # it is wrong to optimize only parameters of mu !!!
+        # 设置 optimizer 为 Adam 优化算法.
         self.pi_optimizer = Adam(self.pi.parameters(), lr=pi_lr)
         self.v_optimizer = Adam(self.v.parameters(), lr=v_lr)
 
     def act(self, obs):
-        """Used for collecting trajectories or testing, which doesn't require tracking grads"""
+        """
+        Function: Used for collecting trajectories or testing, which doesn't require tracking grads.
+        """
         with torch.no_grad():
             logits = self.pi(obs)
             if self.discrete:
@@ -221,26 +223,30 @@ class ppo:
         target_kl=0.01,
         save_name="model.pt",
     ):
-        log = open("./model/result.txt", "w")
+        # 记录训练过程中每个回合的 return 值
+        log = open("./models/result.txt", "w")
+        # ret_stat 记录每个回合的 return 值, len_stat 存储回合长度.
         ret_stat, len_stat = [], []
+        # 初始化环境, 并初始化 状态量, 每回合 return 值和回合长度.
         o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
         for e in range(epochs):
             for t in range(self.steps_per_epoch):
+                # 将观测值 o 转为 tensor
                 o_torch = torch.as_tensor(o, dtype=torch.float32)
+                # 由 o 的 tensor 获取 actor 和 critic 网络的输出
                 a = self.act(o_torch)
-                v = self.v(o_torch).detach().numpy()
                 a_n = action_one_hot(a)
-                if self.agent_id == 1:
-                    next_o, r, d, _ = self.env.step(a_n)
-                else:
-                    next_o, r, d, _ = self.env.step(a_n)
-                next_o, r, d = next_o[self.agent_id], r[self.agent_id], any(d)
+                v = self.v(o_torch).detach().numpy()
+                # 进行游戏
+                next_o, r, d, _ = self.env.step(a_n)
 
+                next_o, r, d = next_o[self.agent_id], r[self.agent_id], any(d)
                 ep_ret += r
                 ep_len += 1
                 self.buf.store(o, a, r, v)
                 o = next_o
-                # print(d)
+
+                # 判断回合是否结束
                 timeout = ep_len == max_ep_len
                 terminal = d or timeout
                 epoch_ended = t == self.steps_per_epoch - 1
@@ -248,7 +254,7 @@ class ppo:
                 if terminal or epoch_ended:
                     if epoch_ended and not terminal:
                         print(
-                            "Warning: trajectory cut off by epoch at %d steps.\n"
+                            "Warning: trajectory cut off by epoch at %d steps."
                             % ep_len,
                             flush=True,
                         )
@@ -265,13 +271,15 @@ class ppo:
                         ret_stat.append(ep_ret)
                         len_stat.append(ep_len)
                     self.buf.finish_path(v)
+                    # 重置环境
                     o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
 
+            # 获取本回合轨迹的训练数据
             data = self.buf.get()
             loss_pi, kl = self.update_pi(data, train_pi_iters, target_kl)
             loss_v = self.update_v(data, train_v_iters)
             print(
-                "epoch: %3d \t loss of pi: %.3f \t loss of v: %.3f \t kl: %.3f \t return: %.3f \t ep_len: %.3f"
+                "epoch: %3d \t loss of pi: %.3f \t loss of v: %.3f \t kl: %.3f \t return: %.3f \t ep_len: %.3f\n"
                 % (e, loss_pi, loss_v, kl, np.mean(ret_stat), np.mean(len_stat))
             )
             log.write(str(np.mean(ret_stat)) + "\n")

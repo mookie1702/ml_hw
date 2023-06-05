@@ -1,9 +1,8 @@
 import numpy as np
+from gym.spaces import Discrete, Box
 
 import torch
 import torch.nn as nn
-
-from gym.spaces import Discrete, Box
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
 
@@ -62,19 +61,24 @@ class GAE_buffer:
         self.path_start_idx = self.ptr
 
     def get(self):
-        assert self.ptr == self.max_size, 'You must fulfill buffer before getting data!'
+        assert self.ptr == self.max_size, "You must fulfill buffer before getting data!"
         self.path_start_idx, self.ptr = 0, 0
 
         adv_mu, adv_std = statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mu) / adv_std
-        data = dict(obs=self.obs_buf, act=self.act_buf, rtg=self.rtg_buf,
-                    adv=self.adv_buf, logp=self.logp_buf)
+        data = dict(
+            obs=self.obs_buf,
+            act=self.act_buf,
+            rtg=self.rtg_buf,
+            adv=self.adv_buf,
+            logp=self.logp_buf,
+        )
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 
 def discount_cumsum(xs, gamma):
     ys = np.zeros_like(xs, dtype=np.float32)
-    cumsum = 0.
+    cumsum = 0.0
     for i, x in enumerate(xs[::-1]):
         cumsum *= gamma
         cumsum += x
@@ -107,10 +111,27 @@ def orthogonal_init_(layer, gain=1.0, bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
 
 
-def mlp(sizes, activation, output_activation=nn.Identity, orthogonal_init=False, final_gain=0.01):
+def mlp(
+    sizes,
+    activation,
+    output_activation=nn.Identity,
+    orthogonal_init=False,
+    final_gain=0.01,
+):
+    """
+    函数作用: 创建多层感知机(MLP)模型.
+
+    :param sizes: 整数列表, 指定每个隐藏层的大小和输出层的大小.
+    :param activation: 隐藏层的激活函数
+    :param output_activation: 输出层的激活函数
+    :param orthogonal_init: 布尔值, 指定是否使用正交初始化方法.
+    :param final_gain: 浮点数, 指定最后一层的初始化增益.
+    """
     layers = []
     for j in range(len(sizes) - 1):
-        act, gain = (activation, 1.0) if j < len(sizes) - 2 else (output_activation, final_gain)
+        act, gain = (
+            (activation, 1.0) if j < len(sizes) - 2 else (output_activation, final_gain)
+        )
         layer = nn.Linear(sizes[j], sizes[j + 1])
         if orthogonal_init:
             orthogonal_init_(layer, gain=gain)
@@ -119,7 +140,6 @@ def mlp(sizes, activation, output_activation=nn.Identity, orthogonal_init=False,
 
 
 class Actor(nn.Module):
-
     def _distribution(self, obs):
         raise NotImplementedError
 
@@ -138,10 +158,22 @@ class Actor(nn.Module):
 
 
 class MLPCategoricalActor(Actor):
-
-    def __init__(self, obs_dim, act_dim, hidden_sizes, activation, output_activation=nn.Identity, orthognal_init=False):
+    def __init__(
+        self,
+        obs_dim,
+        act_dim,
+        hidden_sizes,
+        activation,
+        output_activation=nn.Identity,
+        orthognal_init=False,
+    ):
         super().__init__()
-        self.logits_net = mlp([obs_dim] + list(hidden_sizes) + [act_dim], activation, output_activation, orthognal_init)
+        self.logits_net = mlp(
+            [obs_dim] + list(hidden_sizes) + [act_dim],
+            activation,
+            output_activation,
+            orthognal_init,
+        )
 
     def _distribution(self, obs):
         logits = self.logits_net(obs)
@@ -152,12 +184,24 @@ class MLPCategoricalActor(Actor):
 
 
 class MLPGaussianActor(Actor):
-
-    def __init__(self, obs_dim, act_dim, hidden_sizes, activation, output_activation=nn.Identity, orthognal_init=False):
+    def __init__(
+        self,
+        obs_dim,
+        act_dim,
+        hidden_sizes,
+        activation,
+        output_activation=nn.Identity,
+        orthognal_init=False,
+    ):
         super().__init__()
         log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
         self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
-        self.mu_net = mlp([obs_dim] + list(hidden_sizes) + [act_dim], activation, output_activation, orthognal_init)
+        self.mu_net = mlp(
+            [obs_dim] + list(hidden_sizes) + [act_dim],
+            activation,
+            output_activation,
+            orthognal_init,
+        )
 
     def _distribution(self, obs):
         mu = self.mu_net(obs)
@@ -167,21 +211,33 @@ class MLPGaussianActor(Actor):
     def _log_prob_from_distribution(self, pi, act):
         # if act.shape[0] > 1000:
         #     print("batch logp", pi.log_prob(act).sum(axis=-1).shape)
-        return pi.log_prob(act).sum(axis=-1)  # Last axis sum needed for Torch Normal distribution
+        return pi.log_prob(act).sum(
+            axis=-1
+        )  # Last axis sum needed for Torch Normal distribution
 
 
 class MLPCritic(nn.Module):
-
     def __init__(self, obs_dim, hidden_sizes, activation, orthognal=False):
         super().__init__()
-        self.v_net = mlp([obs_dim] + list(hidden_sizes) + [1], activation, orthogonal_init=orthognal)
+        self.v_net = mlp(
+            [obs_dim] + list(hidden_sizes) + [1], activation, orthogonal_init=orthognal
+        )
 
     def forward(self, obs):
-        return torch.squeeze(self.v_net(obs), -1)  # Critical to ensure v has right shape.
+        return torch.squeeze(
+            self.v_net(obs), -1
+        )  # Critical to ensure v has right shape.
 
 
 class MLPActorCritic(nn.Module):
-    def __init__(self, env, hidden_sizes=(64, 64), activation=nn.Tanh, output_activation=nn.Identity, orthognal_init=False):
+    def __init__(
+        self,
+        env,
+        hidden_sizes=(64, 64),
+        activation=nn.Tanh,
+        output_activation=nn.Identity,
+        orthognal_init=False,
+    ):
         super().__init__()
 
         obs_dim = env.observation_space.shape[0]
@@ -189,10 +245,22 @@ class MLPActorCritic(nn.Module):
         # policy builder depends on action space
         if isinstance(env.action_space, Box):
             self.pi = MLPGaussianActor(
-                obs_dim, env.action_space.shape[0], hidden_sizes, activation, output_activation, orthognal_init)
+                obs_dim,
+                env.action_space.shape[0],
+                hidden_sizes,
+                activation,
+                output_activation,
+                orthognal_init,
+            )
         elif isinstance(env.action_space, Discrete):
             self.pi = MLPCategoricalActor(
-                obs_dim, env.action_space.n, hidden_sizes, activation, output_activation, orthognal_init)
+                obs_dim,
+                env.action_space.n,
+                hidden_sizes,
+                activation,
+                output_activation,
+                orthognal_init,
+            )
 
         # build value function
         self.v = MLPCritic(obs_dim, hidden_sizes, activation, orthognal_init)
@@ -261,7 +329,8 @@ class ZFilter:
         self.rs = RunningStat(shape)
 
     def __call__(self, x, update=True):
-        if update: self.rs.push(x)
+        if update:
+            self.rs.push(x)
         if self.demean:
             x = x - self.rs.mean
         if self.destd:

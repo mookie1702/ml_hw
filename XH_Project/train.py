@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # 训练回合数
     parser.add_argument("--epochs", type=int, default=50)
     # 模型保存的路径和文件名
-    parser.add_argument("--save_name", type=str, default="model/model.pt")
+    parser.add_argument("--save_name", type=str, default="models/model.pt")
     args = parser.parse_args()
 
     # 创建并初始化环境
@@ -53,4 +53,5 @@ if __name__ == "__main__":
         pi_lr=args.pi_lr,
         v_lr=args.v_lr,
     )
+    # Training
     agent.train(epochs=args.epochs, save_name=args.save_name)
