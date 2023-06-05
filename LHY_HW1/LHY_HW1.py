@@ -287,7 +287,6 @@ if __name__ == "__main__":
     )
 
     # Start training!
-
     # put your model and data on the same computation device.
     model = My_Model(input_dim=x_train.shape[1]).to(device)
     trainer(train_loader, valid_loader, model, config, device)

@@ -10,6 +10,29 @@ from torch.distributions.categorical import Categorical
 import policy_gradient
 
 
+def action_one_hot(num):
+    """
+    函数作用: 对动作进行 one-hot 编码.
+    """
+    # action: noop
+    if num == 0:
+        return [1, 0, 0, 0, 0]
+    # action: move right
+    elif num == 1:
+        return [0, 1, 0, 0, 0]
+    # action: move left
+    elif num == 2:
+        return [0, 0, 1, 0, 0]
+    # action: move up
+    elif num == 3:
+        return [0, 0, 0, 1, 0]
+    # action: move down
+    elif num == 4:
+        return [0, 0, 0, 0, 1]
+    else:
+        return [0, 0, 0, 0, 0]
+
+
 class GAE_buffer:
     """
     A buffer for storing trajectories experienced by a policy gradient agent
@@ -60,7 +83,7 @@ class GAE_buffer:
             then you should provided an estimate V(S_T) using critic to compensate for
             the rewards beyond time T.
 
-        param v: the value estimated by critic for the final state
+        val: the value estimated by critic for the final state
 
         return: None
         """
@@ -108,12 +131,15 @@ class ppo:
         clip_ratio=0.2,
     ):
         super(ppo, self).__init__()
+
+        # agent 0 为追击者, agent 1 为逃逸者
         self.agent_id = 1 if agent_type == "good" else 0
 
-        # Instantiate environment
+        # 初始化环境
         self.env = env_fn()
-        print(self.env.action_space)
-        self.discrete = isinstance(self.env.action_space[self.agent_id], Discrete)
+        # TODO: 不清楚这里为什么 self.discrete = False
+        # self.discrete = isinstance(self.env.action_space[self.agent_id], Discrete)
+        self.discrete = True
         self.obs_dim = self.env.observation_space[self.agent_id].shape[0]
         self.act_dim = (
             self.env.action_space[self.agent_id].n
@@ -195,7 +221,7 @@ class ppo:
         target_kl=0.01,
         save_name="model.pt",
     ):
-        log = open("./result.txt", "w")
+        log = open("./model/result.txt", "w")
         ret_stat, len_stat = [], []
         o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
         for e in range(epochs):
@@ -203,10 +229,11 @@ class ppo:
                 o_torch = torch.as_tensor(o, dtype=torch.float32)
                 a = self.act(o_torch)
                 v = self.v(o_torch).detach().numpy()
+                a_n = action_one_hot(a)
                 if self.agent_id == 1:
-                    next_o, r, d, _ = self.env.step(a, 0)
+                    next_o, r, d, _ = self.env.step(a_n)
                 else:
-                    next_o, r, d, _ = self.env.step(a, 0)
+                    next_o, r, d, _ = self.env.step(a_n)
                 next_o, r, d = next_o[self.agent_id], r[self.agent_id], any(d)
 
                 ep_ret += r

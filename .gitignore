@@ -1,14 +1,17 @@
-# files
-*.ckpt
-result.txt
-sample_log.txt
+# Files
+# 模型预测文件
+pred.csv
 
-# folders
+# Folders
+# VSCode 配置文件夹
 .vscode
-dataset
-*/models
-*/runs
-
-*/__pycache__
-*/*/__pycache__
-*/*/*/__pycache__
+# Python 优化文件夹
+__pycache__/
+# 训练数据文件夹
+dataset/
+# 模型文件夹
+models/
+# 输出文件夹
+runs/
+# 预测文件夹
+pred/
