@@ -6,7 +6,30 @@ import torch
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
 
-render_rate = 10
+render_rate = 100
+
+
+def action_one_hot(num):
+    """
+    函数作用: 对动作进行 one-hot 编码.
+    """
+    # action: noop
+    if num == 0:
+        return [1, 0, 0, 0, 0]
+    # action: move right
+    elif num == 1:
+        return [0, 1, 0, 0, 0]
+    # action: move left
+    elif num == 2:
+        return [0, 0, 1, 0, 0]
+    # action: move up
+    elif num == 3:
+        return [0, 0, 0, 1, 0]
+    # action: move down
+    elif num == 4:
+        return [0, 0, 0, 0, 1]
+    else:
+        return [0, 0, 0, 0, 0]
 
 
 def load_policy(fpath):
@@ -45,15 +68,16 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
         if render:
             env.render()
             time.sleep(1 / render_rate)
-
-        action_n = get_action(obs_n)
-        obs_n, rew_n, done_n, _ = env.step(action_n, 0)
+        # 获取回合过程中的变量
+        action = get_action(obs_n)
+        action_n = action_one_hot(action)
+        obs_n, rew_n, done_n, _ = env.step(action_n)
         obs_n, rew_n = obs_n[1], rew_n[1]
         ep_ret += np.sum(rew_n)
         ep_len += 1
         done = done_n
         # 检测回合是否结束
-        if done or (ep_len == max_ep_len):
+        if True in done_n or (ep_len == max_ep_len):
             print(
                 "Episode %d \t EpRet %.3f \t EpLen %d \t Result %s"
                 % (episode, ep_ret, ep_len, done)

@@ -19,11 +19,11 @@ class GAE_buffer:
 
     def __init__(self, size, obs_dim, act_dim, gamma, lam):
         """
-        param size: 缓冲区大小, 即数据点的数量
-        param obs_dim: 状态空间的维度
-        param act_dim: 动作空间的维度
-        param gamma: 折扣因子,用于计算奖励的折扣累积
-        param lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
+        size: 缓冲区大小, 即数据点的数量
+        obs_dim: 状态空间的维度
+        act_dim: 动作空间的维度
+        gamma: 折扣因子,用于计算奖励的折扣累积
+        lam: GAE-lambda, lam=1 means REINFORCE and lam=0 means A2C, typically 0.9~0.99
         """
         # 存储状态的数组
         self.obs_buf = np.zeros(policy_gradient.combined_shape(size, obs_dim))
@@ -57,7 +57,8 @@ class GAE_buffer:
         Compute reward-to-go whenever the following cases appear
          1. agent dies, which means the return following is zero.
          2. it reaches the max_episode_len or the trajectory being cut off at time T,
-            then you should provided an estimate V(S_T) using critic to compensate for the rewards beyond time T
+            then you should provided an estimate V(S_T) using critic to compensate for
+            the rewards beyond time T.
 
         param v: the value estimated by critic for the final state
 

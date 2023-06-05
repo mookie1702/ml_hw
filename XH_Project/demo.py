@@ -28,7 +28,7 @@ if __name__ == "__main__":
     while True:
         # 动作空间: [noop, move right, move left, move up, move down]
         act_n = np.array([0, 0, 1, 0, 1])
-        next_obs_n, reward_n, done_n, _ = env.step(act_n, 1)
+        next_obs_n, reward_n, done_n, _ = env.step(act_n)
 
         # 读取游戏图片
         image = env.render("rgb_array")[0]

@@ -31,6 +31,7 @@ if __name__ == "__main__":
     # 创建并初始化环境
     scenario = scenarios.load("simple_tag.py").Scenario()
     world = scenario.make_world()
+    # TODO: observation 函数
     env = MultiAgentEnv(
         world,
         scenario.reset_world,
