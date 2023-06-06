@@ -7,7 +7,6 @@ if __name__ == "__main__":
     # 创建并初始化环境
     scenario = scenarios.load("simple_tag.py").Scenario()
     world = scenario.make_world()
-    # 解析参数
     env = MultiAgentEnv(
         world,
         scenario.reset_world,
@@ -17,8 +16,10 @@ if __name__ == "__main__":
         done_callback=scenario.is_done,
         shared_viewer=True,
     )
+
     # 设置追捕智能体与逃逸智能体的位置
     env.reset(np.array([[0.0, 0.0], [0.7, 0.7]]))
+
     # 读取游戏图片
     image = env.render("rgb_array")
 

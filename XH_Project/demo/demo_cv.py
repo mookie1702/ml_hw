@@ -5,7 +5,6 @@ from multiagent.environment import MultiAgentEnv
 
 old_red = [0.0, 0.0]
 old_green = [0.7, 0.7]
-obs_ = []
 
 
 def observation_cv(env):
@@ -32,6 +31,8 @@ def observation_cv(env):
 
     global old_red
     global old_green
+
+    obs_ = []
 
     # 获取当前游戏画面图像 img_bgr
     image = env.render(mode="rgb_array")
@@ -122,7 +123,6 @@ if __name__ == "__main__":
     # 创建并初始化环境
     scenario = scenarios.load("simple_tag.py").Scenario()
     world = scenario.make_world()
-    # 解析参数
     env = MultiAgentEnv(
         world,
         scenario.reset_world,
@@ -132,13 +132,14 @@ if __name__ == "__main__":
         done_callback=scenario.is_done,
         shared_viewer=True,
     )
+
     # 设置追捕智能体与逃逸智能体的位置
     env.reset(np.array([[0.0, 0.0], [0.7, 0.7]]))
 
     # 动作空间: [noop, move right, move left, move up, move down]
     act_n = np.array([0, 0, 1, 0, 1])
     next_obs_n, reward_n, done_n, _ = env.step(act_n)
-
     print(next_obs_n[1])
+
     obs_ = observation_cv(env)
     print(obs_)

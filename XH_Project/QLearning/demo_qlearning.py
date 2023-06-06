@@ -8,7 +8,9 @@ from multiagent.environment import MultiAgentEnv
 num_episodes = 100000
 learning_rate = 0.1
 discount_factor = 0.99
-epsilon = 0.1
+
+epsilon = 1
+epsilon_discount = 0.999
 
 
 def action_one_hot(num):
@@ -37,17 +39,22 @@ def action_one_hot(num):
 # 定义Q-learning算法的主函数
 def q_learning(env, num_episodes, learning_rate, discount_factor, epsilon):
     # 创建Q-table，初始化为0
-    num_states_rows = 200
-    num_states_cols = 200
+    num_states_rows = 50
+    num_states_cols = 50
     num_actions = 4
     Q = np.zeros((num_states_rows, num_states_cols, num_actions))
 
     # 迭代每个episode
     for episode in range(num_episodes):
         state = env.reset()[1][0:2]
+        epsilon *= epsilon_discount
+
+        if epsilon < 0.01:
+            epsilon = 0.0
+
         while True:
-            x = int((state[0] + 1.00) * 100)
-            y = int((state[1] + 1.00) * 100)
+            x = int((state[0] + 1.00) * 25)
+            y = int((state[1] + 1.00) * 25)
             state[0] = x
             state[1] = y
             # 使用epsilon-greedy策略选择动作
@@ -62,8 +69,8 @@ def q_learning(env, num_episodes, learning_rate, discount_factor, epsilon):
             next_state = next_state[1][0:2]
             reward = reward[1]
 
-            next_x = int((next_state[0] + 1.00) * 100)
-            next_y = int((next_state[1] + 1.00) * 100)
+            next_x = int((next_state[0] + 1.00) * 25)
+            next_y = int((next_state[1] + 1.00) * 25)
 
             # 使用Q-learning更新Q值
             Q[x, y, action - 1] += learning_rate * (
@@ -77,7 +84,7 @@ def q_learning(env, num_episodes, learning_rate, discount_factor, epsilon):
                     result = "Fail!"
                 else:
                     result = "Succeed!"
-                print(episode, result)
+                print(episode, result, epsilon)
                 break
 
     return Q
@@ -87,7 +94,6 @@ if __name__ == "__main__":
     # 创建并初始化环境
     scenario = scenarios.load("simple_tag.py").Scenario()
     world = scenario.make_world()
-    # 解析参数
     env = MultiAgentEnv(
         world,
         scenario.reset_world,
@@ -97,6 +103,7 @@ if __name__ == "__main__":
         done_callback=scenario.is_done,
         shared_viewer=True,
     )
+
     # 设置追捕智能体与逃逸智能体的位置
     env.reset(np.array([[0.0, 0.0], [0.7, 0.7]]))
 

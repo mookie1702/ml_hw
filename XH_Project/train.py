@@ -31,7 +31,6 @@ if __name__ == "__main__":
     # 创建并初始化环境
     scenario = scenarios.load("simple_tag.py").Scenario()
     world = scenario.make_world()
-    # TODO: observation 函数
     env = MultiAgentEnv(
         world,
         scenario.reset_world,
@@ -53,7 +52,9 @@ if __name__ == "__main__":
         pi_lr=args.pi_lr,
         v_lr=args.v_lr,
     )
+
     # Training
     agent.train(epochs=args.epochs)
+
     # Trainning with user-defined observation function.
     # agent.train_cv(epochs=args.epochs)
