@@ -306,7 +306,7 @@ class ppo:
         train_pi_iters=80,
         max_ep_len=100,
         target_kl=0.01,
-        save_name="model.pt",
+        save_name="./models/model.pt",
     ):
         # 记录训练过程中每个回合的 return 值
         log = open("./models/result.txt", "w")
@@ -314,8 +314,6 @@ class ppo:
         ret_stat, len_stat = [], []
         # 初始化环境, 并初始化 状态量, 每回合 return 值和回合长度.
         o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
-        # 用自己的观测函数进行替代
-        o = observation_cv(self.env)
         for e in range(epochs):
             for t in range(self.steps_per_epoch):
                 # 将观测值 o 转为 tensor
@@ -327,8 +325,84 @@ class ppo:
                 # 进行游戏
                 next_o, r, d, _ = self.env.step(a_n)
                 next_o, r, d = next_o[self.agent_id], r[self.agent_id], any(d)
-                # 用自己的观测函数进行替代
-                next_o = observation_cv(self.env)
+
+                ep_ret += r
+                ep_len += 1
+                self.buf.store(o, a, r, v)
+                o = next_o
+
+                # 判断回合是否结束
+                timeout = ep_len == max_ep_len
+                terminal = d or timeout
+                epoch_ended = t == self.steps_per_epoch - 1
+
+                if terminal or epoch_ended:
+                    if epoch_ended and not terminal:
+                        print(
+                            "Warning: trajectory cut off by epoch at %d steps."
+                            % ep_len,
+                            flush=True,
+                        )
+                    # if trajectory didn't reach terminal state, bootstrap value target
+                    if timeout or epoch_ended:
+                        v = (
+                            self.v(torch.as_tensor(o, dtype=torch.float32))
+                            .detach()
+                            .numpy()
+                        )
+                    else:
+                        v = 0.0
+                    if terminal:
+                        ret_stat.append(ep_ret)
+                        len_stat.append(ep_len)
+                    self.buf.finish_path(v)
+                    # 重置环境
+                    o, ep_ret, ep_len = self.env.reset()[self.agent_id], 0, 0
+
+            # 获取本回合轨迹的训练数据
+            data = self.buf.get()
+            loss_pi, kl = self.update_pi(data, train_pi_iters, target_kl)
+            loss_v = self.update_v(data, train_v_iters)
+            print(
+                "epoch: %3d \t loss of pi: %.3f \t loss of v: %.3f \t kl: %.3f \t return: %.3f \t ep_len: %.3f\n"
+                % (e, loss_pi, loss_v, kl, np.mean(ret_stat), np.mean(len_stat))
+            )
+            log.write(str(np.mean(ret_stat)) + "\n")
+
+            torch.save(self.pi, save_name)
+            ret_stat, len_stat = [], []
+        log.close()
+
+    def train_cv(
+        self,
+        epochs=50,
+        train_v_iters=80,
+        train_pi_iters=80,
+        max_ep_len=100,
+        target_kl=0.01,
+        save_name="./models/model_cv.pt",
+    ):
+        """
+        函数作用: 使用自定义的 observation_cv 来训练模型.
+        """
+        # 记录训练过程中每个回合的 return 值
+        log = open("./models/result.txt", "w")
+        # ret_stat 记录每个回合的 return 值, len_stat 存储回合长度.
+        ret_stat, len_stat = [], []
+        # 初始化环境, 并初始化 状态量, 每回合 return 值和回合长度.
+        self.env.reset()
+        o, ep_ret, ep_len = observation_cv(self.env), 0, 0
+        for e in range(epochs):
+            for t in range(self.steps_per_epoch):
+                # 将观测值 o 转为 tensor
+                o_torch = torch.as_tensor(o, dtype=torch.float32)
+                # 由 o 的 tensor 获取 actor 和 critic 网络的输出
+                a = self.act(o_torch)
+                a_n = action_one_hot(a)
+                v = self.v(o_torch).detach().numpy()
+                # 进行游戏
+                next_o, r, d, _ = self.env.step(a_n)
+                next_o, r, d = observation_cv(self.env), r[self.agent_id], any(d)
 
                 ep_ret += r
                 ep_len += 1
