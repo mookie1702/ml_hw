@@ -43,8 +43,8 @@ class DQNConfig:
         self.env = "simple_tag.py"
         self.seed = 15
         self.ShowImage = True  # render image
-        self.load_model = True  # load model
-        self.train = False
+        self.load_model = False  # load model
+        self.train = True
         self.model_path = "models/"  # path to save models
         self.capacity = int(2e5)  # replay buffer size
         self.batch_size = 256  # minibatch size
@@ -52,7 +52,7 @@ class DQNConfig:
         self.tau = 1e-3  # for soft update of target parameters
         self.lr = 1e-4  # learning rate
         self.update_every = 1  # Learn every UPDATE_EVERY time steps.
-        self.train_eps = 10000
+        self.train_eps = 100000
         self.train_steps = 2000
         self.eval_eps = 1
         self.eval_steps = 2000
@@ -157,13 +157,10 @@ def train(cfg: DQNConfig, env, agent):
             np.savetxt(
                 cfg.model_path + "ma_reward_{}.txt".format(curr_time), ma_rewards
             )
-            if i_ep > 1500:
+            if i_ep > 4000:
                 tmp_rewards, tmp_ma_rewards = eval(cfg, env, agent)
                 if tmp_rewards[-1] >= 0.0:
-                    while True:
-                        tmp_rewards, tmp_ma_rewards = eval(
-                            cfg, env, agent, ShowImage=True
-                        )
+                    tmp_rewards, tmp_ma_rewards = eval(cfg, env, agent, ShowImage=True)
 
     print("Complete training！")
     return rewards, ma_rewards
